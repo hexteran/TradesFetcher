@@ -97,7 +97,7 @@ class OKEX_TradesFetcher(TradesFetcher):
         data_chunk['price_curr'] = [self.price_curr for i in range(len(data_chunk))]
         data_chunk.rename({'size':'volume'},inplace = True, axis = 1)
         self.write(data_chunk)
-'''     
+        
 class COINBENE_TradesFetcher(TradesFetcher):  
     def check_response(self, response):
         try:
@@ -165,7 +165,7 @@ class DERIBIT_TradesFetcher(TradesFetcher):
         data_chunk['volume'] = data_chunk['volume'].apply(float)
         data_chunk['localtime'] = [datetime.now() for i in range(len(data_chunk))]
         self.write(data_chunk)      
-'''
+
 url = 'https://www.deribit.com/api/v2/public/get_last_trades_by_instrument?count=1000&instrument_name=BTC-PERPETUAL'
 obj = DERIBIT_TradesFetcher(url, 'postgres','admin','BTC-PERPETUAL', price_curr = 'USDT', schema = 'Deribit')
 obj.request()
