@@ -58,7 +58,7 @@ class TradesFetcher:
             logging.debug('{sc}/{sy}:Initial db commit'.format(sc = self.schema, sy = self.symbol))
         else:
             conc = pd.concat([data_chunk, self.last_chunk, self.last_chunk])
-            conc.drop_duplicates(subset = 'trade_id', keep=False, inplace = True)
+            conc.drop_duplicates(subset =['trade_id','price','volume'], keep=False, inplace = True)
             self.last_chunk = data_chunk
             if len(conc) == 0:
                 return
