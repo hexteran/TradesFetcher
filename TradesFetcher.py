@@ -48,6 +48,7 @@ class TradesFetcher:
         pass
         
     def write(self, data_chunk):
+        
         if len(self.last_chunk) == 0:
             self.last_chunk = data_chunk
             for i in range(len(data_chunk)):
@@ -65,6 +66,22 @@ class TradesFetcher:
             conc.to_sql(self.symbol, self.engine, if_exists = 'append', index = False, schema = self.schema)
             print(datetime.now(),'query is committed, {l} rows are added'.format(l=len(conc))) # обязательно добавить в лог
             logging.debug('{sc}/{sy}:query is committed, {l} rows are added'.format(sc = self.schema, sy = self.symbol,l=len(conc)))
+        '''
+        if len(self.last_chunk)==0:
+            self.last_chunk = data_chunk
+            data_chunk.to_csv(self.schema+'_'+self.symbol+'.csv', mode = 'a')
+            logging.debug('{sc}/{sy}:Initial db commit'.format(sc = self.schema, sy = self.symbol))
+        else:
+            conc = pd.concat([data_chunk, self.last_chunk, self.last_chunk])
+            conc.drop_duplicates(subset =['trade_id','price','volume'], keep=False, inplace = True)
+            self.last_chunk = data_chunk
+            if len(conc) == 0:
+                return
+            conc.to_csv(self.schema+'_'+self.symbol+'.csv', index = False, mode = 'a')
+            print(datetime.now(),'query is committed, {l} rows are added'.format(l=len(conc))) # обязательно добавить в лог
+            logging.debug('{sc}/{sy}:query is committed, {l} rows are added'.format(sc = self.schema, sy = self.symbol,l=len(conc)))
+       ''' 
+            
 '''            
 class CEX_TradesFetcher(TradesFetcher):    
     def parse_response(self, data_chunk):

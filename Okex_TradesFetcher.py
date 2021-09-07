@@ -13,7 +13,8 @@ from sqlalchemy import exc
 from datetime import datetime
 from TradesFetcher import TradesFetcher
 import urllib
- 
+import json
+
 logname = 'Okex_TradesFetcher'
 symbols = [('ADA','USDT'),('XRP','USDT'),
            ('BTC','USDT'),('ETH','USDT'),
@@ -33,24 +34,36 @@ file_handler.setFormatter(formatter)
 file_handler.setLevel(logging.ERROR)
 logger.addHandler(file_handler)
 
-class OKEX_TradesFetcher(TradesFetcher):    
+class OKEX_TradesFetcher(TradesFetcher):   
+    def check_response(self, response):
+        try:
+            J = json.loads(response.read())
+            J = J['data']
+        except:
+            assert False, 'A problem with json parsing has occured, response:{resp}'.format(resp = response.read())
+        assert  len(J) != 0, 'Response is empty'
+        data_chunk = pd.DataFrame(J)
+        self.parse_response(data_chunk)
+ 
     def parse_response(self, data_chunk):
-        data_chunk.drop('time', inplace = True, axis = 1)
-        data_chunk['timestamp'] = pd.to_datetime(data_chunk['timestamp'])
+        data_chunk.rename({'px':'price','tradeId':'trade_id','ts':'timestamp','sz':'size'},axis=1,inplace=True)
+        data_chunk.drop('instId', inplace = True, axis = 1)
+        data_chunk['timestamp'] = pd.to_datetime(data_chunk['timestamp'],unit='ms')
         data_chunk['side'].replace('sell','s',inplace = True)
         data_chunk['side'].replace('buy','b', inplace = True)
         data_chunk['size'] = data_chunk['size'].apply(float)
         data_chunk['price'] = data_chunk['price'].apply(float)
         data_chunk['localtime'] = [datetime.now() for i in range(len(data_chunk))]
-       # data_chunk['exchange'] = ['CEX' for i in range(len(data_chunk))]
+       ## data_chunk['exchange'] = ['CEX' for i in range(len(data_chunk))]
         data_chunk['symbol'] = [self.symbol for i in range(len(data_chunk))]
         data_chunk['vol_curr'] = [self.vol_curr for i in range(len(data_chunk))]
         data_chunk['price_curr'] = [self.price_curr for i in range(len(data_chunk))]
         data_chunk.rename({'size':'volume'},inplace = True, axis = 1)
         self.write(data_chunk)
+        #print(data_chunk)
         
 
-urls = ['https://www.okex.com/api/spot/v3/instruments/'+i[0]+'-'+i[1]+'/trades?limit=100' for i in symbols]
+urls = ['https://www.okex.com/api/v5/market/trades?instId='+i[0]+'-'+i[1]+'&limit=500' for i in symbols]
 objs = [OKEX_TradesFetcher(urls[i], 'postgres','admin',o[0]+o[1], price_curr = o[1], schema = 'Okex') for i,o in enumerate(symbols)]
 try:
     while True:
@@ -66,7 +79,7 @@ try:
                     message = str(symbols[i])+', type:'+str(type(e))+', args:'+str(e.args)
                     print(message)
                     logger.error(message)
-            time.sleep(2)
+            time.sleep(0.5)
 
 except KeyboardInterrupt:
             print('Execution stopped by the user')
